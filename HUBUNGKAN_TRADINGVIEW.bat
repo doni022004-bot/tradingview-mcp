@@ -59,7 +59,7 @@ if exist "%INSTALL_DIR%\package.json" (
     echo [2/5] Folder proyek sudah ada di %INSTALL_DIR%
 ) else (
     echo [2/5] Mengunduh proyek tradingview-mcp ke %INSTALL_DIR% ...
-    powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri 'https://github.com/tradesdontlie/tradingview-mcp/archive/refs/heads/main.zip' -OutFile '$env:TEMP\tvmcp.zip'; Expand-Archive -Path '$env:TEMP\tvmcp.zip' -DestinationPath '$env:TEMP\tvmcp_extract' -Force; Move-Item -Path '$env:TEMP\tvmcp_extract\tradingview-mcp-main' -Destination '%INSTALL_DIR%' -Force"
+    powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri 'https://github.com/tradesdontlie/tradingview-mcp/archive/refs/heads/main.zip' -OutFile '%TEMP%\tvmcp.zip'; Expand-Archive -Path '%TEMP%\tvmcp.zip' -DestinationPath '%TEMP%\tvmcp_extract' -Force; Move-Item -Path '%TEMP%\tvmcp_extract\tradingview-mcp-main' -Destination '%INSTALL_DIR%' -Force"
     if not exist "%INSTALL_DIR%\package.json" (
         echo.
         echo [GAGAL] Unduh/ekstrak proyek gagal. Periksa koneksi internet Anda.
