@@ -37,9 +37,18 @@ if errorlevel 1 (
         exit /b 1
     )
     echo Node.js terpasang. Menyegarkan PATH untuk sesi ini...
-    for /f "tokens=2*" %%A in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v Path') do set "SYS_PATH=%%B"
-    for /f "tokens=2*" %%A in ('reg query "HKCU\Environment" /v Path 2^>nul') do set "USR_PATH=%%B"
-    set "PATH=!SYS_PATH!;!USR_PATH!"
+    if exist "%ProgramFiles%\nodejs\node.exe" set "PATH=%PATH%;%ProgramFiles%\nodejs"
+    if exist "%ProgramFiles(x86)%\nodejs\node.exe" set "PATH=%PATH%;%ProgramFiles(x86)%\nodejs"
+    if exist "%LOCALAPPDATA%\Programs\nodejs\node.exe" set "PATH=%PATH%;%LOCALAPPDATA%\Programs\nodejs"
+    where node >nul 2>&1
+    if errorlevel 1 (
+        echo.
+        echo [GAGAL] Node.js terpasang tapi tidak ditemukan di lokasi umum.
+        echo Tutup jendela ini, buka Command Prompt baru, lalu jalankan file ini lagi.
+        echo.
+        pause
+        exit /b 1
+    )
     echo.
 ) else (
     echo [1/5] Node.js sudah terpasang.
