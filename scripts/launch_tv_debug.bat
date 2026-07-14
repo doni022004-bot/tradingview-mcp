@@ -56,16 +56,64 @@ set TRIES=0
 curl -s http://127.0.0.1:%PORT%/json/version >nul 2>&1
 if %errorlevel% equ 0 goto ready
 set /a TRIES+=1
-if %TRIES% geq 30 (
-    echo.
-    echo Error: TradingView is running but CDP never became available on port %PORT%.
-    echo Some Windows MSIX builds block the debug port. Use the tv_launch MCP tool,
-    echo which falls back to launching from a local copy of the package.
-    exit /b 1
-)
+if %TRIES% geq 15 goto msix_fallback
 echo Still waiting...
 ping -n 3 127.0.0.1 >nul
 goto check
+
+:msix_fallback
+REM Some Windows MSIX builds block the debug port when launched straight out of
+REM WindowsApps. Copy the package to a plain (non-ACL-restricted) folder under
+REM LOCALAPPDATA and retry from there -- same fallback tv_launch uses.
+echo %TV_EXE% | findstr /I "WindowsApps" >nul
+if errorlevel 1 (
+    echo.
+    echo Error: TradingView is running but CDP never became available on port %PORT%.
+    exit /b 1
+)
+
+echo.
+echo CDP did not come up from WindowsApps. Retrying from a local copy...
+for %%F in ("%TV_EXE%") do set "TV_SRC_DIR=%%~dpF"
+if "%TV_SRC_DIR:~-1%"=="\" set "TV_SRC_DIR=%TV_SRC_DIR:~0,-1%"
+for %%N in ("%TV_SRC_DIR%") do set "TV_PKG_NAME=%%~nxN"
+set "TV_LOCAL_DIR=%LOCALAPPDATA%\tradingview-mcp\%TV_PKG_NAME%"
+set "TV_LOCAL_EXE=%TV_LOCAL_DIR%\TradingView.exe"
+
+if not exist "%TV_LOCAL_EXE%" (
+    echo Copying package to %TV_LOCAL_DIR% ^(one-time, may take a minute^)...
+    taskkill /F /IM TradingView.exe >nul 2>&1
+    ping -n 3 127.0.0.1 >nul
+    if not exist "%LOCALAPPDATA%\tradingview-mcp" mkdir "%LOCALAPPDATA%\tradingview-mcp"
+    robocopy "%TV_SRC_DIR%" "%TV_LOCAL_DIR%" /E /NFL /NDL /NJH /NJS /NC /NS >nul
+)
+
+if not exist "%TV_LOCAL_EXE%" (
+    echo.
+    echo Error: Local copy fallback failed. Use the tv_launch MCP tool instead --
+    echo it has the same fallback but with more detailed diagnostics.
+    exit /b 1
+)
+
+taskkill /F /IM TradingView.exe >nul 2>&1
+ping -n 3 127.0.0.1 >nul
+echo Starting local copy: %TV_LOCAL_EXE%
+start "" "%TV_LOCAL_EXE%" --remote-debugging-port=%PORT%
+
+set TRIES=0
+:check2
+ping -n 3 127.0.0.1 >nul
+curl -s http://127.0.0.1:%PORT%/json/version >nul 2>&1
+if %errorlevel% equ 0 goto ready
+set /a TRIES+=1
+if %TRIES% geq 15 (
+    echo.
+    echo Error: CDP still did not come up after the local-copy fallback.
+    echo Use the tv_launch MCP tool for more detailed diagnostics.
+    exit /b 1
+)
+echo Still waiting...
+goto check2
 
 :ready
 echo.
